@@ -4,9 +4,50 @@
 
 Comprehensive security analysis of StuddyHub's Supabase backend reveals **critical vulnerabilities** in data access controls and storage security. The application exhibits widespread unauthorized data exposure due to inadequate Row Level Security (RLS) policies.
 
+---
+
+## UI/UX Issues
+
+After a not so thorough review of the system and its current implementation, here are a few things we can highlight:
+
+### 🎨 **UI Design Problems**
+The UI has some issues that need attention:
+
+- **Generic Design**: The overall interface feels generic and lacks distinctive styling
+- **Content Overflow**: Multiple instances of content not being properly contained or styled
+- **Tailwind Utility Issues**: Some Tailwind utilities are not being used properly
+- **Mobile Responsiveness**: Buttons and elements overlapping on mobile breakpoints
+
+### 🚨 **Console Errors & Warnings**
+
+#### Major Issues
+- **Module Loading Failure**: `PodcastsPage.SRzbffvJ.js` - Failed to load module script with MIME type error
+- **Dynamic Import Error**: `TypeError: Failed to fetch dynamically imported module` affecting podcasts functionality
+- **PWA Banner Issue**: `beforeinstallpromptevent.preventDefault()` called without proper prompt implementation
+
+#### Moderate Issues
+- **PWA Install Banner**: Not shown due to improper event handling
+- **Image Loading**: Lazy loading placeholders being used instead of actual images
+- **Accessibility Warnings**: Missing `Description` or `aria-describedby` for dialog content
+
+#### Minor Issues
+- **Console Warnings**: Various accessibility and performance warnings throughout the application
+
+### 📱 **Mobile Experience**
+- **Button Overlap**: Mobile buttons showing over other elements
+- **Layout Breaks**: Responsive design not properly implemented for all screen sizes
+- **Touch Targets**: Some interactive elements may be too small for touch interaction
+
+### � **Technical Debt**
+- **Module Resolution**: Dynamic imports failing due to incorrect MIME types
+- **Bundle Splitting**: Code splitting not working properly for certain pages
+- **Error Handling**: Missing proper error boundaries and fallbacks
+
+---
+
 ## Critical Findings
 
-### 🚨 **Data Access Vulnerabilities**
+### �🚨 **Data Access Vulnerabilities**
 - **Unauthenticated Access**: Anonymous users can access sensitive user data across multiple tables
 - **Missing RLS Policies**: Core tables lack proper Row Level Security implementation
 - **Cross-User Data Exposure**: Potential for users to access other users' private information
@@ -25,13 +66,26 @@ The following production tables were tested and found vulnerable:
 | `chat_sessions` | Full Read | HIGH | Chat history, AI conversations |
 | `social_posts` | Full Read | MEDIUM | Social media posts |
 | `ai_podcasts` | Full Read | MEDIUM | Generated podcasts |
-| `subscriptions` | Full Read | CRITICAL | Payment information, plans |
+| `subscriptions` | No Data | LOW | Payment information, plans |
 | `schedule_items` | Full Read | MEDIUM | User schedules, calendars |
+
+**Note**: Some tables like `subscriptions` did not return any data, indicating they may have proper RLS policies implemented. However, other tables that returned data should not be accessible to unauthenticated users with just the anonymous keys.
 
 ### 🔐 **Storage Security Issues**
 - **Public Bucket Access**: Direct URL access to user files
 - **Generated Images**: Unrestricted access to AI-generated content
 - **Document Storage**: Potential exposure of sensitive documents
+- **Critical Finding**: Anonymous users can list and access storage buckets directly
+
+#### Storage Test Results:
+| Storage Bucket | Access Level | Files Found | Risk Level |
+|----------------|--------------|-------------|------------|
+| Public Bucket | ALLOWED | 0 files | HIGH |
+| Generated Images | ALLOWED | 0 images | HIGH |
+| Documents | ALLOWED | 10 documents | HIGH |
+| Public Image URLs | ALLOWED | Direct access successful | HIGH |
+
+**Storage Security Assessment**: 🚨 **STORAGE SECURITY RISK!** Found 4 high-risk vulnerabilities. Anonymous users can access storage buckets and potentially view user-uploaded documents.
 
 ## Technical Details
 
@@ -47,6 +101,47 @@ The application's Supabase anonymous key allows unrestricted read access to prod
 1. **Direct API Access**: Supabase REST API endpoints exposed
 2. **Storage URLs**: Predictable file access patterns
 3. **Missing Authorization**: No session validation for data access
+
+---
+
+## UI/UX Issues
+
+After a not so thorough review of the system and its current implementation, here are a few things we can highlight:
+
+### 🎨 **UI Design Problems**
+The UI has some issues that need attention:
+
+- **Generic Design**: The overall interface feels generic and lacks distinctive styling
+- **Content Overflow**: Multiple instances of content not being properly contained or styled
+- **Tailwind Utility Issues**: Some Tailwind utilities are not being used properly
+- **Mobile Responsiveness**: Buttons and elements overlapping on mobile breakpoints
+
+### 🚨 **Console Errors & Warnings**
+
+#### Major Issues
+- **Module Loading Failure**: `PodcastsPage.SRzbffvJ.js` - Failed to load module script with MIME type error
+- **Dynamic Import Error**: `TypeError: Failed to fetch dynamically imported module` affecting podcasts functionality
+- **PWA Banner Issue**: `beforeinstallpromptevent.preventDefault()` called without proper prompt implementation
+
+#### Moderate Issues
+- **PWA Install Banner**: Not shown due to improper event handling
+- **Image Loading**: Lazy loading placeholders being used instead of actual images
+- **Accessibility Warnings**: Missing `Description` or `aria-describedby` for dialog content
+
+#### Minor Issues
+- **Console Warnings**: Various accessibility and performance warnings throughout the application
+
+### 📱 **Mobile Experience**
+- **Button Overlap**: Mobile buttons showing over other elements
+- **Layout Breaks**: Responsive design not properly implemented for all screen sizes
+- **Touch Targets**: Some interactive elements may be too small for touch interaction
+
+### 🔧 **Technical Debt**
+- **Module Resolution**: Dynamic imports failing due to incorrect MIME types
+- **Bundle Splitting**: Code splitting not working properly for certain pages
+- **Error Handling**: Missing proper error boundaries and fallbacks
+
+---
 
 ## Risk Assessment
 
