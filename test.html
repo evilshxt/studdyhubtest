@@ -1,0 +1,1748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StuddyHub Security Audit Tool</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#64748b',
+                        success: '#10b981',
+                        error: '#ef4444',
+                        warning: '#f59e0b',
+                        supabase: '#3ecf8e'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .result-container {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .json-display {
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.875rem;
+            line-height: 1.5;
+        }
+        .loading-spinner {
+            border: 2px solid #f3f4f6;
+            border-top: 2px solid #3ecf8e;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <!-- Header -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <div class="flex items-center mb-4">
+                <div class="text-3xl mr-3"><i class="fas fa-shield-alt text-green-500"></i></div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">StuddyHub Security Audit Tool</h1>
+                    <p class="text-gray-600">Comprehensive security testing for StuddyHub backend</p>
+                </div>
+            </div>
+
+            <!-- Supabase Config Info -->
+            <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                <h3 class="font-semibold text-green-800 mb-2">Connected Supabase Project</h3>
+                <div class="text-sm text-green-700">
+                    <p><strong>Project URL:</strong> https://kegsrvnywshxyucgjxml.supabase.co</p>
+                    <p><strong>Status:</strong> <span class="text-green-600 font-medium">Connected</span></p>
+                    <p><strong>Auth:</strong> Anonymous access configured</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Auth Status Display -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Authentication Status</h2>
+            <div id="authStatus" class="flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <div class="text-gray-500">
+                        <span id="authStatusText">Not authenticated</span>
+                    </div>
+                    <button onclick="signOut()" id="signOutBtn" class="hidden px-3 py-1 bg-red-500 text-white text-sm rounded-md hover:bg-red-600 transition-colors">
+                        Sign Out
+                    </button>
+                </div>
+                <div id="userInfo" class="text-sm text-gray-600"></div>
+            </div>
+        </div>
+
+        <!-- Test Controls -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">Database Testing</h2>
+
+            <div class="test-grid mb-6">
+                <!-- Notes Table Test -->
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h3 class="font-semibold text-gray-700 mb-2"><i class="fas fa-sticky-note mr-2"></i>Notes Table</h3>
+                    <button onclick="testTable('notes')" class="w-full px-4 py-2 bg-supabase text-white rounded-md hover:bg-green-600 transition-colors">
+                        Test Notes Table
+                    </button>
+                    <div id="notes-result" class="mt-2 text-sm"></div>
+                </div>
+
+                <!-- Documents Table Test -->
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h3 class="font-semibold text-gray-700 mb-2"><i class="fas fa-file-alt mr-2"></i>Documents Table</h3>
+                    <button onclick="testTable('documents')" class="w-full px-4 py-2 bg-supabase text-white rounded-md hover:bg-green-600 transition-colors">
+                        Test Documents Table
+                    </button>
+                    <div id="documents-result" class="mt-2 text-sm"></div>
+                </div>
+
+                <!-- Profiles Table Test -->
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h3 class="font-semibold text-gray-700 mb-2"><i class="fas fa-user mr-2"></i>Profiles Table</h3>
+                    <button onclick="testTable('profiles')" class="w-full px-4 py-2 bg-supabase text-white rounded-md hover:bg-green-600 transition-colors">
+                        Test Profiles Table
+                    </button>
+                    <div id="profiles-result" class="mt-2 text-sm"></div>
+                </div>
+
+                <!-- Social Users Table Test -->
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h3 class="font-semibold text-gray-700 mb-2"><i class="fas fa-users mr-2"></i>Social Users Table</h3>
+                    <button onclick="testTable('social_users')" class="w-full px-4 py-2 bg-supabase text-white rounded-md hover:bg-green-600 transition-colors">
+                        Test Social Users Table
+                    </button>
+                    <div id="social_users-result" class="mt-2 text-sm"></div>
+                </div>
+
+                <!-- Class Recordings Table Test -->
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h3 class="font-semibold text-gray-700 mb-2"><i class="fas fa-microphone mr-2"></i>Class Recordings Table</h3>
+                    <button onclick="testTable('class_recordings')" class="w-full px-4 py-2 bg-supabase text-white rounded-md hover:bg-green-600 transition-colors">
+                        Test Class Recordings Table
+                    </button>
+                    <div id="class_recordings-result" class="mt-2 text-sm"></div>
+                </div>
+
+                <!-- Chat Sessions Table Test -->
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h3 class="font-semibold text-gray-700 mb-2"><i class="fas fa-comments mr-2"></i>Chat Sessions Table</h3>
+                    <button onclick="testTable('chat_sessions')" class="w-full px-4 py-2 bg-supabase text-white rounded-md hover:bg-green-600 transition-colors">
+                        Test Chat Sessions Table
+                    </button>
+                    <div id="chat_sessions-result" class="mt-2 text-sm"></div>
+                </div>
+
+                <!-- Social Posts Table Test -->
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h3 class="font-semibold text-gray-700 mb-2"><i class="fas fa-share-alt mr-2"></i>Social Posts Table</h3>
+                    <button onclick="testTable('social_posts')" class="w-full px-4 py-2 bg-supabase text-white rounded-md hover:bg-green-600 transition-colors">
+                        Test Social Posts Table
+                    </button>
+                    <div id="social_posts-result" class="mt-2 text-sm"></div>
+                </div>
+
+                <!-- Social Groups Table Test -->
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h3 class="font-semibold text-gray-700 mb-2"><i class="fas fa-user-friends mr-2"></i>Social Groups Table</h3>
+                    <button onclick="testTable('social_groups')" class="w-full px-4 py-2 bg-supabase text-white rounded-md hover:bg-green-600 transition-colors">
+                        Test Social Groups Table
+                    </button>
+                    <div id="social_groups-result" class="mt-2 text-sm"></div>
+                </div>
+
+                <!-- AI Podcasts Table Test -->
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h3 class="font-semibold text-gray-700 mb-2"><i class="fas fa-podcast mr-2"></i>AI Podcasts Table</h3>
+                    <button onclick="testTable('ai_podcasts')" class="w-full px-4 py-2 bg-supabase text-white rounded-md hover:bg-green-600 transition-colors">
+                        Test AI Podcasts Table
+                    </button>
+                    <div id="ai_podcasts-result" class="mt-2 text-sm"></div>
+                </div>
+
+                <!-- Subscriptions Table Test -->
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h3 class="font-semibold text-gray-700 mb-2"><i class="fas fa-credit-card mr-2"></i>Subscriptions Table</h3>
+                    <button onclick="testTable('subscriptions')" class="w-full px-4 py-2 bg-supabase text-white rounded-md hover:bg-green-600 transition-colors">
+                        Test Subscriptions Table
+                    </button>
+                    <div id="subscriptions-result" class="mt-2 text-sm"></div>
+                </div>
+
+                <!-- Schedule Items Table Test -->
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h3 class="font-semibold text-gray-700 mb-2"><i class="fas fa-calendar mr-2"></i>Schedule Items Table</h3>
+                    <button onclick="testTable('schedule_items')" class="w-full px-4 py-2 bg-supabase text-white rounded-md hover:bg-green-600 transition-colors">
+                        Test Schedule Items Table
+                    </button>
+                    <div id="schedule_items-result" class="mt-2 text-sm"></div>
+                </div>
+
+                <!-- Document Folders Table Test -->
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h3 class="font-semibold text-gray-700 mb-2"><i class="fas fa-folder mr-2"></i>Document Folders Table</h3>
+                    <button onclick="testTable('document_folders')" class="w-full px-4 py-2 bg-supabase text-white rounded-md hover:bg-green-600 transition-colors">
+                        Test Document Folders Table
+                    </button>
+                    <div id="document_folders-result" class="mt-2 text-sm"></div>
+                </div>
+
+                <!-- Quizzes Table Test -->
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h3 class="font-semibold text-gray-700 mb-2"><i class="fas fa-vial mr-2"></i>Quizzes Table</h3>
+                    <button onclick="testTable('quizzes')" class="w-full px-4 py-2 bg-supabase text-white rounded-md hover:bg-green-600 transition-colors">
+                        Test Quizzes Table
+                    </button>
+                    <div id="quizzes-result" class="mt-2 text-sm"></div>
+                </div>
+
+                <!-- Storage/Bucket Test -->
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h3 class="font-semibold text-gray-700 mb-2"><i class="fas fa-database mr-2"></i>Storage Bucket Test</h3>
+                    <button onclick="testStorageAccess()" class="w-full px-4 py-2 bg-supabase text-white rounded-md hover:bg-green-600 transition-colors">
+                        Test Storage Access
+                    </button>
+                    <div id="storage-result" class="mt-2 text-sm"></div>
+                </div>
+
+                <!-- Custom Query -->
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h3 class="font-semibold text-gray-700 mb-2"><i class="fas fa-search mr-2"></i>Custom Query</h3>
+                    <input type="text" id="customTable" placeholder="Table name" class="w-full px-3 py-2 border border-gray-300 rounded-md mb-2">
+                    <button onclick="testCustomTable()" class="w-full px-4 py-2 bg-primary text-white rounded-md hover:bg-blue-600 transition-colors">
+                        Test Custom Table
+                    </button>
+                    <div id="custom-result" class="mt-2 text-sm"></div>
+                </div>
+            </div>
+
+            <!-- Advanced Testing -->
+            <div class="border-t pt-4">
+                <h3 class="font-semibold text-gray-700 mb-3">Advanced Testing</h3>
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="testConnection()" class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors">
+                        <i class="fas fa-plug mr-2"></i>Test Connection
+                    </button>
+                    <button onclick="extractTableNames()" class="px-4 py-2 bg-cyan-500 text-white rounded-md hover:bg-cyan-600 transition-colors">
+                        <i class="fas fa-search mr-2"></i>Extract Table Names
+                    </button>
+                    <button onclick="testRLS()" class="px-4 py-2 bg-warning text-white rounded-md hover:bg-yellow-600 transition-colors">
+                        <i class="fas fa-shield-alt mr-2"></i>Test RLS Policies
+                    </button>
+                    <button onclick="testInsert()" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors">
+                        <i class="fas fa-plus mr-2"></i>Test Insert Permissions
+                    </button>
+                    <button onclick="testAuth()" class="px-4 py-2 bg-purple-500 text-white rounded-md hover:bg-purple-600 transition-colors">
+                        <i class="fas fa-key mr-2"></i>Test Auth Flow
+                    </button>
+                    <button onclick="testOAuthSignup()" class="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors">
+                        <i class="fab fa-google mr-2"></i>Google OAuth Test
+                    </button>
+                    <button onclick="testDataAccess()" class="px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 transition-colors" id="dataAccessBtn" disabled>
+                        <i class="fas fa-unlock mr-2"></i>Test Data Access
+                    </button>
+                    <button onclick="analyzeSchema()" class="px-4 py-2 bg-indigo-500 text-white rounded-md hover:bg-indigo-600 transition-colors">
+                        <i class="fas fa-sitemap mr-2"></i>Analyze Schema
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div class="grid md:grid-cols-2 gap-6">
+            <!-- Query Results -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-800">Query Results</h3>
+                    <div id="downloadBtnContainer"></div>
+                </div>
+                <div id="queryResult" class="result-container">
+                    <p class="text-gray-500 text-center py-8">Select a test to view results</p>
+                </div>
+            </div>
+
+            <!-- Security Test Results -->
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Security Analysis</h3>
+                <div id="securityResult">
+                    <p class="text-gray-500 text-center py-8">Run security tests to see analysis</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Schema Analysis -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mt-6">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Database Schema Analysis</h3>
+            <div id="schemaResult">
+                <p class="text-gray-500 text-center py-8">Click "Analyze Schema" to discover database structure</p>
+            </div>
+        </div>
+
+        <!-- Footer Note -->
+        <div class="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <div class="flex items-start">
+                <div class="text-yellow-600 mr-2"><i class="fas fa-exclamation-triangle"></i></div>
+                <div class="text-sm text-yellow-800">
+                    <strong>Security Note:</strong> This tool uses anonymous Supabase access. Some operations may be restricted by RLS (Row Level Security) policies. This is for testing purposes only.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Import Supabase client
+        import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+        // Supabase configuration (obfuscated)
+        const xyz = "https://kegsrvnywshxyucgjxml.supabase.co";
+        const shi = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtlZ3Nydm55d3NoeHl1Y2dqeG1sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEzMzAxNTgsImV4cCI6MjA2NjkwNjE1OH0.uzLKKEp7mRk8cqg2ezVDpcYMVpOlgZjxkNMrpFigDf8";
+
+        // Initialize Supabase client
+        const supabase = createClient(xyz, shi);
+
+        let currentData = null;
+        let currentTable = '';
+        let currentUser = null;
+
+        // Initialize auth state listener
+        supabase.auth.onAuthStateChange((event, session) => {
+            currentUser = session?.user || null;
+            updateAuthStatus();
+            
+            // Enable/disable data access test based on auth state
+            const dataAccessBtn = document.getElementById('dataAccessBtn');
+            if (dataAccessBtn) {
+                dataAccessBtn.disabled = !currentUser;
+            }
+        });
+
+        // Update authentication status display
+        function updateAuthStatus() {
+            const statusText = document.getElementById('authStatusText');
+            const userInfo = document.getElementById('userInfo');
+            const signOutBtn = document.getElementById('signOutBtn');
+            
+            if (currentUser) {
+                statusText.innerHTML = '<span class="text-green-600 font-medium">✅ Authenticated</span>';
+                userInfo.innerHTML = `
+                    <div class="text-right">
+                        <strong>User:</strong> ${currentUser.email || currentUser.user_metadata?.full_name || 'Unknown'}<br>
+                        <strong>ID:</strong> ${currentUser.id.slice(0, 8)}...<br>
+                        <strong>Provider:</strong> ${currentUser.app_metadata?.provider || 'Unknown'}
+                    </div>
+                `;
+                signOutBtn.classList.remove('hidden');
+            } else {
+                statusText.innerHTML = '<span class="text-gray-500">Not authenticated</span>';
+                userInfo.innerHTML = '';
+                signOutBtn.classList.add('hidden');
+            }
+        }
+
+        // Test a specific table
+        window.testTable = async function(tableName) {
+            const resultDiv = document.getElementById(`${tableName}-result`);
+            resultDiv.innerHTML = '<div class="flex items-center"><div class="loading-spinner mr-2"></div> Testing...</div>';
+
+            try {
+                const { data, error, count } = await supabase
+                    .from(tableName)
+                    .select('*', { count: 'exact', head: false })
+                    .limit(10);
+
+                if (error) throw error;
+
+                currentData = data;
+                currentTable = tableName;
+
+                resultDiv.innerHTML = `
+                    <div class="text-success">
+                        ✅ <strong>Success:</strong> ${count || data.length} records found
+                    </div>
+                `;
+
+                displayQueryResult(tableName, data, count);
+
+            } catch (error) {
+                let statusMessage = '';
+                let statusType = '';
+
+                // Better error classification
+                if (error.message.includes('relation') && error.message.includes('does not exist')) {
+                    statusMessage = `❌ <strong>Table Not Found:</strong> '${tableName}' does not exist`;
+                    statusType = 'TABLE_NOT_FOUND';
+                } else if (error.message.includes('permission') || error.message.includes('denied') || error.code === 'PGRST301') {
+                    statusMessage = `🚫 <strong>Access Blocked:</strong> RLS policy prevents access to '${tableName}'`;
+                    statusType = 'ACCESS_BLOCKED';
+                } else {
+                    statusMessage = `❌ <strong>Error:</strong> ${error.message}`;
+                    statusType = 'OTHER_ERROR';
+                }
+
+                resultDiv.innerHTML = `
+                    <div class="text-error">
+                        ${statusMessage}
+                    </div>
+                `;
+                
+                displayQueryResult(tableName, null, 0, { ...error, statusType });
+            }
+        };
+
+        // Test storage/bucket access
+        window.testStorageAccess = async function() {
+            const resultDiv = document.getElementById('storage-result');
+            resultDiv.innerHTML = '<div class="flex items-center"><div class="loading-spinner mr-2"></div> Testing storage access...</div>';
+
+            try {
+                const tests = [];
+
+                // Test 1: Try to list public files
+                try {
+                    const { data: publicFiles, error: publicError } = await supabase
+                        .storage
+                        .from('public')
+                        .list('', { limit: 10 });
+                    
+                    tests.push({
+                        test: 'List Public Bucket',
+                        status: publicError ? 'DENIED' : 'ALLOWED',
+                        details: publicError ? publicError.message : `Found ${publicFiles?.length || 0} files`,
+                        risk: publicError ? 'LOW' : 'HIGH'
+                    });
+                } catch (error) {
+                    tests.push({
+                        test: 'List Public Bucket',
+                        status: 'ERROR',
+                        details: error.message,
+                        risk: 'UNKNOWN'
+                    });
+                }
+
+                // Test 2: Try to access generatedimages folder
+                try {
+                    const { data: imageFiles, error: imageError } = await supabase
+                        .storage
+                        .from('generatedimages')
+                        .list('', { limit: 10 });
+                    
+                    tests.push({
+                        test: 'List Generated Images',
+                        status: imageError ? 'DENIED' : 'ALLOWED',
+                        details: imageError ? imageError.message : `Found ${imageFiles?.length || 0} images`,
+                        risk: imageError ? 'LOW' : 'HIGH'
+                    });
+                } catch (error) {
+                    tests.push({
+                        test: 'List Generated Images',
+                        status: 'ERROR',
+                        details: error.message,
+                        risk: 'UNKNOWN'
+                    });
+                }
+
+                // Test 3: Try to access documents folder
+                try {
+                    const { data: docFiles, error: docError } = await supabase
+                        .storage
+                        .from('documents')
+                        .list('', { limit: 10 });
+                    
+                    tests.push({
+                        test: 'List Documents',
+                        status: docError ? 'DENIED' : 'ALLOWED',
+                        details: docError ? docError.message : `Found ${docFiles?.length || 0} documents`,
+                        risk: docError ? 'LOW' : 'HIGH'
+                    });
+                } catch (error) {
+                    tests.push({
+                        test: 'List Documents',
+                        status: 'ERROR',
+                        details: error.message,
+                        risk: 'UNKNOWN'
+                    });
+                }
+
+                // Test 4: Try to access a specific public image URL
+                try {
+                    const testImageUrl = `${xyz}/storage/v1/object/public/generatedimages/70f305f9-50c9-4c04-bbab-1ac347ac798c/generated_image_1769270237116.png`;
+                    const response = await fetch(testImageUrl);
+                    
+                    tests.push({
+                        test: 'Access Public Image URL',
+                        status: response.ok ? 'ALLOWED' : 'DENIED',
+                        details: response.ok ? 'Direct access successful' : `HTTP ${response.status}`,
+                        risk: response.ok ? 'HIGH' : 'LOW'
+                    });
+                } catch (error) {
+                    tests.push({
+                        test: 'Access Public Image URL',
+                        status: 'ERROR',
+                        details: error.message,
+                        risk: 'UNKNOWN'
+                    });
+                }
+
+                // Generate security assessment
+                const highRiskTests = tests.filter(r => r.risk === 'HIGH');
+                const allowedTests = tests.filter(r => r.status === 'ALLOWED');
+
+                const storageHtml = `
+                    <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                        <h4 class="font-semibold text-purple-800 mb-3">📁 Storage Security Analysis</h4>
+                        <div class="space-y-2 mb-4">
+                            ${tests.map(result => `
+                                <div class="p-3 bg-white rounded">
+                                    <div class="flex items-center justify-between mb-1">
+                                        <span class="font-medium">${result.test}</span>
+                                        <span class="px-2 py-1 text-xs rounded ${
+                                            result.status === 'ALLOWED' ? 'bg-green-100 text-green-800' :
+                                            result.status === 'DENIED' ? 'bg-red-100 text-red-800' :
+                                            result.status === 'ERROR' ? 'bg-yellow-100 text-yellow-800' :
+                                            'bg-gray-100 text-gray-800'
+                                        }">
+                                            ${result.status}
+                                        </span>
+                                    </div>
+                                    <div class="text-sm text-gray-600">${result.details}</div>
+                                    <div class="text-xs mt-1">
+                                        Risk Level: <span class="font-medium ${
+                                            result.risk === 'HIGH' ? 'text-red-600' :
+                                            result.risk === 'LOW' ? 'text-green-600' :
+                                            'text-gray-600'
+                                        }">${result.risk}</span>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <div class="border-t pt-3">
+                            <div class="text-sm font-semibold mb-2">Storage Security Assessment:</div>
+                            <div class="text-sm ${
+                                highRiskTests.length > 0 ? 'text-red-700' : 'text-green-700'
+                            }">
+                                ${highRiskTests.length > 0 ? 
+                                    `🚨 <strong>STORAGE SECURITY RISK!</strong> Found ${highRiskTests.length} high-risk vulnerabilities. Anonymous users can access storage buckets.` :
+                                    '✅ <strong>STORAGE SECURITY LOOKS GOOD</strong> Storage access appears to be properly restricted.'
+                                }
+                            </div>
+                            ${allowedTests.length > 0 ? `
+                                <div class="text-sm text-purple-600 mt-2">
+                                    <strong>Note:</strong> ${allowedTests.length} storage tests returned data. This may indicate public access to user files.
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+
+                resultDiv.innerHTML = storageHtml;
+
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="text-error">
+                        <strong>Storage Test Failed:</strong><br>
+                        ${error.message}
+                    </div>
+                `;
+            }
+        };
+
+        // Test custom table
+        window.testCustomTable = async function() {
+            const tableName = document.getElementById('customTable').value.trim();
+            if (!tableName) {
+                document.getElementById('custom-result').innerHTML = '<div class="text-error">Enter table name</div>';
+                return;
+            }
+            await testTable(tableName);
+        };
+
+        // Display query results
+        function displayQueryResult(tableName, data, count, error = null) {
+            const resultDiv = document.getElementById('queryResult');
+            
+            if (error) {
+                let errorHtml = '';
+                
+                if (error.statusType === 'TABLE_NOT_FOUND') {
+                    errorHtml = `
+                        <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                            <div class="text-error">
+                                <strong>Table '${tableName}' Not Found</strong><br>
+                                The table does not exist in the database.
+                            </div>
+                            <div class="text-sm text-gray-600 mt-2">
+                                💡 <strong>Suggestion:</strong> Check if the table name is correct or if migrations have been run.
+                            </div>
+                        </div>
+                    `;
+                } else if (error.statusType === 'ACCESS_BLOCKED') {
+                    errorHtml = `
+                        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                            <div class="text-warning">
+                                <strong>Access Blocked for '${tableName}'</strong><br>
+                                RLS (Row Level Security) policies prevent access to this table.
+                            </div>
+                            <div class="text-sm text-gray-600 mt-2">
+                                🔒 <strong>Security Note:</strong> This is expected behavior for properly secured tables. You may need to be authenticated or have specific permissions.
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    errorHtml = `
+                        <div class="text-error">
+                            <strong>Query Failed for '${tableName}':</strong><br>
+                            ${error.message}
+                        </div>
+                    `;
+                }
+                
+                resultDiv.innerHTML = errorHtml;
+                removeDownloadButton();
+                return;
+            }
+
+            if (!data || data.length === 0) {
+                resultDiv.innerHTML = `
+                    <div class="text-warning">
+                        <strong>No data found in '${tableName}'</strong><br>
+                        Table exists but is empty or access is restricted
+                    </div>
+                `;
+                removeDownloadButton();
+                return;
+            }
+
+            const resultHtml = `
+                <div class="mb-4">
+                    <div class="flex items-center justify-between">
+                        <h4 class="font-semibold text-gray-800">Table: ${tableName}</h4>
+                        <span class="text-sm text-gray-500">${count || data.length} total records (showing ${data.length})</span>
+                    </div>
+                </div>
+                <div class="json-display bg-gray-50 p-4 rounded-md border">
+                    <pre class="text-gray-800">${JSON.stringify(data, null, 2)}</pre>
+                </div>
+            `;
+
+            resultDiv.innerHTML = resultHtml;
+            addDownloadButton(tableName, data);
+        }
+
+        // Test Supabase connection and get actual table names
+        window.testConnection = async function() {
+            const resultDiv = document.getElementById('securityResult');
+            resultDiv.innerHTML = '<div class="flex items-center justify-center py-4"><div class="loading-spinner mr-2"></div> Testing connection...</div>';
+
+            try {
+                // Test 1: Direct API call to Supabase REST API
+                const startTime = Date.now();
+                const response = await fetch(`${supabaseUrl}/rest/v1/`, {
+                    headers: {
+                        'apikey': supabaseKey,
+                        'Authorization': `Bearer ${supabaseKey}`
+                    }
+                });
+                const responseTime = Date.now() - startTime;
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                // Test 2: Try to query a simple table - this will fail with bad key
+                const testResponse = await fetch(`${supabaseUrl}/rest/v1/profiles?select=count`, {
+                    headers: {
+                        'apikey': supabaseKey,
+                        'Authorization': `Bearer ${supabaseKey}`
+                    }
+                });
+
+                // Test 3: Validate the JWT token structure
+                let isValidJWT = false;
+                try {
+                    const parts = supabaseKey.split('.');
+                    if (parts.length === 3) {
+                        const header = JSON.parse(atob(parts[0]));
+                        const payload = JSON.parse(atob(parts[1]));
+                        isValidJWT = header && payload && payload.iss && payload.role;
+                    }
+                } catch (jwtError) {
+                    isValidJWT = false;
+                }
+
+                const connectionHtml = `
+                    <div class="bg-${isValidJWT && testResponse.ok ? 'green' : 'red'}-50 border border-${isValidJWT && testResponse.ok ? 'green' : 'red'}-200 rounded-lg p-4">
+                        <h4 class="font-semibold text-${isValidJWT && testResponse.ok ? 'green' : 'red'}-800 mb-3">${isValidJWT && testResponse.ok ? '🔌' : '❌'} Supabase Connection Analysis</h4>
+                        
+                        <div class="grid grid-cols-2 gap-4 mb-4">
+                            <div class="bg-white p-3 rounded">
+                                <div class="text-sm font-medium text-gray-700">API Status</div>
+                                <div class="text-lg font-bold text-${response.ok ? 'green' : 'red'}-600">${response.ok ? '✅ REACHABLE' : '❌ ERROR'}</div>
+                            </div>
+                            <div class="bg-white p-3 rounded">
+                                <div class="text-sm font-medium text-gray-700">Auth Test</div>
+                                <div class="text-lg font-bold text-${testResponse.ok ? 'green' : 'red'}-600">${testResponse.ok ? '✅ VALID' : '❌ INVALID'}</div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <div class="text-sm font-medium text-gray-700 mb-2">Security Analysis:</div>
+                            <div class="text-sm text-gray-600 bg-white p-3 rounded">
+                                <ul class="list-disc list-inside space-y-1">
+                                    <li class="${isValidJWT ? 'text-green-600' : 'text-red-600'}">
+                                        ${isValidJWT ? '✅' : '❌'} JWT Token Format: ${isValidJWT ? 'Valid' : 'Invalid/Corrupted'}
+                                    </li>
+                                    <li class="${testResponse.ok ? 'text-green-600' : 'text-red-600'}">
+                                        ${testResponse.ok ? '✅' : '❌'} Database Access: ${testResponse.ok ? 'Authorized' : 'Denied'}
+                                    </li>
+                                    <li class="${response.ok ? 'text-green-600' : 'text-red-600'}">
+                                        ${response.ok ? '✅' : '❌'} Server Response: ${response.ok ? 'Healthy' : 'Error'}
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="text-sm text-${isValidJWT && testResponse.ok ? 'green' : 'red'}-700">
+                            <strong>Conclusion:</strong> 
+                            ${isValidJWT && testResponse.ok ? 
+                                '✅ Connection is secure and working properly.' : 
+                                '🚨 SECURITY ISSUE DETECTED! The API key appears to be invalid or corrupted.'}
+                            ${!isValidJWT ? ' The JWT token format is invalid.' : ''}
+                            ${!testResponse.ok ? ' Database authentication is failing.' : ''}
+                        </div>
+                    </div>
+                `;
+
+                resultDiv.innerHTML = connectionHtml;
+
+                // Update connection status in header based on REAL tests
+                updateConnectionStatus(isValidJWT && testResponse.ok, responseTime);
+
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <h4 class="font-semibold text-red-800 mb-3">❌ Connection Failed</h4>
+                        <div class="text-sm text-red-700">
+                            <strong>Error:</strong> ${error.message}<br>
+                            <strong>Security:</strong> This indicates a problem with the API key or network connectivity.
+                        </div>
+                    </div>
+                `;
+                
+                updateConnectionStatus(false, 0);
+            }
+        };
+
+        // Update connection status in header
+        function updateConnectionStatus(isConnected, responseTime) {
+            const statusDiv = document.querySelector('.bg-green-50 .text-green-600');
+            if (statusDiv) {
+                if (isConnected) {
+                    statusDiv.innerHTML = `<span class="font-medium">Connected (${responseTime}ms)</span>`;
+                    statusDiv.className = 'text-green-600 font-medium';
+                } else {
+                    statusDiv.innerHTML = '<span class="font-medium">Disconnected</span>';
+                    statusDiv.className = 'text-red-600 font-medium';
+                }
+            }
+        }
+        // Test RLS policies
+        window.testRLS = async function() {
+            const resultDiv = document.getElementById('securityResult');
+            resultDiv.innerHTML = '<div class="flex items-center justify-center py-4"><div class="loading-spinner mr-2"></div> Testing RLS policies...</div>';
+
+            const testTables = ['notes', 'documents', 'profiles', 'social_users', 'class_recordings', 'chat_sessions', 'social_posts', 'social_groups', 'ai_podcasts', 'subscriptions', 'schedule_items', 'document_folders', 'quizzes'];
+            const results = [];
+
+            for (const table of testTables) {
+                try {
+                    const { data, error } = await supabase
+                        .from(table)
+                        .select('*')
+                        .limit(1);
+
+                    results.push({
+                        table,
+                        status: error ? 'DENIED' : 'ALLOWED',
+                        message: error ? error.message : 'Read access granted'
+                    });
+                } catch (error) {
+                    results.push({
+                        table,
+                        status: 'ERROR',
+                        message: error.message
+                    });
+                }
+            }
+
+            const rlsHtml = `
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h4 class="font-semibold text-blue-800 mb-3">🔒 Row Level Security Analysis</h4>
+                    <div class="space-y-2">
+                        ${results.map(result => `
+                            <div class="flex items-center justify-between p-2 bg-white rounded">
+                                <span class="font-medium">${result.table}</span>
+                                <span class="px-2 py-1 text-xs rounded ${
+                                    result.status === 'ALLOWED' ? 'bg-green-100 text-green-800' :
+                                    result.status === 'DENIED' ? 'bg-red-100 text-red-800' :
+                                    'bg-yellow-100 text-yellow-800'
+                                }">
+                                    ${result.status}
+                                </span>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="mt-3 text-sm text-blue-700">
+                        <strong>Security Assessment:</strong> 
+                        ${results.filter(r => r.status === 'ALLOWED').length > 0 ? 
+                            'Some tables allow anonymous access. Consider implementing stricter RLS policies.' :
+                            'RLS policies appear to be properly configured.'}
+                    </div>
+                </div>
+            `;
+
+            resultDiv.innerHTML = rlsHtml;
+        };
+
+        // Test insert permissions
+        window.testInsert = async function() {
+            const resultDiv = document.getElementById('securityResult');
+            resultDiv.innerHTML = '<div class="flex items-center justify-center py-4"><div class="loading-spinner mr-2"></div> Testing insert permissions...</div>';
+
+            const testData = {
+                notes: { title: 'Test Note', content: 'Test content', user_id: 'test-id' },
+                documents: { title: 'Test Doc', file_name: 'test.pdf', user_id: 'test-id' },
+                profiles: { id: 'test-id', email: 'test@example.com', full_name: 'Test User' },
+                social_users: { id: 'test-id', username: 'testuser', display_name: 'Test User' },
+                class_recordings: { title: 'Test Recording', user_id: 'test-id' },
+                chat_sessions: { title: 'Test Chat', user_id: 'test-id' },
+                social_posts: { content: 'Test post', user_id: 'test-id' },
+                social_groups: { name: 'Test Group', description: 'Test description' },
+                ai_podcasts: { title: 'Test Podcast', user_id: 'test-id' },
+                subscriptions: { user_id: 'test-id', plan_type: 'free' },
+                schedule_items: { title: 'Test Item', user_id: 'test-id' },
+                document_folders: { name: 'Test Folder', user_id: 'test-id' },
+                quizzes: { title: 'Test Quiz', user_id: 'test-id' }
+            };
+
+            const results = [];
+
+            for (const [table, data] of Object.entries(testData)) {
+                try {
+                    const { error } = await supabase
+                        .from(table)
+                        .insert(data);
+
+                    results.push({
+                        table,
+                        status: error ? 'DENIED' : 'ALLOWED',
+                        message: error ? error.message : 'Insert access granted'
+                    });
+                } catch (error) {
+                    results.push({
+                        table,
+                        status: 'ERROR',
+                        message: error.message
+                    });
+                }
+            }
+
+            const insertHtml = `
+                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                    <h4 class="font-semibold text-yellow-800 mb-3">✍️ Insert Permission Analysis</h4>
+                    <div class="space-y-2">
+                        ${results.map(result => `
+                            <div class="flex items-center justify-between p-2 bg-white rounded">
+                                <span class="font-medium">${result.table}</span>
+                                <span class="px-2 py-1 text-xs rounded ${
+                                    result.status === 'ALLOWED' ? 'bg-green-100 text-green-800' :
+                                    result.status === 'DENIED' ? 'bg-red-100 text-red-800' :
+                                    'bg-yellow-100 text-yellow-800'
+                                }">
+                                    ${result.status}
+                                </span>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="mt-3 text-sm text-yellow-700">
+                        <strong>Security Assessment:</strong> 
+                        ${results.filter(r => r.status === 'ALLOWED').length > 0 ? 
+                            '⚠️ Some tables allow anonymous inserts. This could be a security risk.' :
+                            '✅ Insert permissions are properly restricted.'}
+                    </div>
+                </div>
+            `;
+
+            resultDiv.innerHTML = insertHtml;
+        };
+
+        // Test auth flow
+        window.testAuth = async function() {
+            const resultDiv = document.getElementById('securityResult');
+            resultDiv.innerHTML = '<div class="flex items-center justify-center py-4"><div class="loading-spinner mr-2"></div> Testing authentication...</div>';
+
+            try {
+                // Test anonymous user creation
+                const { data: authData, error: authError } = await supabase.auth.signInAnonymously();
+                
+                if (authError) throw authError;
+
+                // Test getting current user
+                const { data: userData, error: userError } = await supabase.auth.getUser();
+                
+                const authHtml = `
+                    <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                        <h4 class="font-semibold text-purple-800 mb-3">🔐 Authentication Analysis</h4>
+                        <div class="space-y-2">
+                            <div class="p-2 bg-white rounded">
+                                <strong>Anonymous Sign-in:</strong> 
+                                <span class="px-2 py-1 text-xs rounded bg-green-100 text-green-800">SUCCESS</span>
+                            </div>
+                            <div class="p-2 bg-white rounded">
+                                <strong>User Session:</strong> 
+                                <span class="px-2 py-1 text-xs rounded ${userError ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}">
+                                    ${userError ? 'FAILED' : 'ACTIVE'}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="mt-3 text-sm text-purple-700">
+                            <strong>User ID:</strong> ${authData.user?.id || 'N/A'}<br>
+                            <strong>Auth Status:</strong> ${userData.user ? 'Authenticated' : 'Not authenticated'}
+                        </div>
+                    </div>
+                `;
+
+                resultDiv.innerHTML = authHtml;
+
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="text-error">
+                        <strong>Authentication Test Failed:</strong><br>
+                        ${error.message}
+                    </div>
+                `;
+            }
+        };
+
+        // Analyze database schema
+        window.analyzeSchema = async function() {
+            const resultDiv = document.getElementById('schemaResult');
+            resultDiv.innerHTML = '<div class="flex items-center justify-center py-4"><div class="loading-spinner mr-2"></div> Analyzing schema...</div>';
+
+            // Actual table names from StuddyHub production
+            const actualTables = [
+                'notes', 'documents', 'profiles', 'social_users', 'class_recordings',
+                'chat_sessions', 'chat_messages', 'social_posts', 'social_groups', 'social_likes',
+                'social_comments', 'social_follows', 'social_hashtags', 'social_tags',
+                'social_bookmarks', 'social_notifications', 'social_reports', 'social_group_members',
+                'social_chat_sessions', 'social_post_hashtags', 'social_post_tags',
+                'ai_podcasts', 'podcast_members', 'podcast_shares', 'podcast_listeners',
+                'subscriptions', 'user_learning_goals', 'achievements', 'schedule_items',
+                'schedule_reminders', 'notification_preferences', 'document_folders',
+                'document_folder_items', 'quizzes'
+            ];
+            
+            const schemaInfo = [];
+
+            for (const table of actualTables) {
+                try {
+                    const { data, error, count } = await supabase
+                        .from(table)
+                        .select('*', { count: 'exact', head: true })
+                        .limit(1);
+
+                    if (!error) {
+                        // Get column information by sampling data
+                        const { data: sampleData } = await supabase
+                            .from(table)
+                            .select('*')
+                            .limit(1);
+
+                        const columns = sampleData && sampleData.length > 0 ? 
+                            Object.keys(sampleData[0]) : [];
+
+                        schemaInfo.push({
+                            table,
+                            exists: true,
+                            recordCount: count || 0,
+                            columns: columns,
+                            accessible: true,
+                            status: 'FOUND_ACCESSIBLE'
+                        });
+                    } else {
+                        // Classify the error
+                        let status = 'UNKNOWN_ERROR';
+                        if (error.message.includes('relation') && error.message.includes('does not exist')) {
+                            status = 'NOT_FOUND';
+                        } else if (error.message.includes('permission') || error.message.includes('denied') || error.code === 'PGRST301') {
+                            status = 'ACCESS_BLOCKED';
+                        }
+
+                        schemaInfo.push({
+                            table,
+                            exists: status === 'NOT_FOUND' ? false : true,
+                            accessible: status === 'ACCESS_BLOCKED' ? false : false,
+                            status: status,
+                            error: error.message
+                        });
+                    }
+                } catch (error) {
+                    schemaInfo.push({
+                        table,
+                        exists: false,
+                        accessible: false,
+                        status: 'ERROR',
+                        error: error.message
+                    });
+                }
+            }
+
+            // Count different statuses
+            const foundTables = schemaInfo.filter(s => s.status === 'FOUND_ACCESSIBLE');
+            const blockedTables = schemaInfo.filter(s => s.status === 'ACCESS_BLOCKED');
+            const notFoundTables = schemaInfo.filter(s => s.status === 'NOT_FOUND');
+
+            const schemaHtml = `
+                <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
+                    <h4 class="font-semibold text-indigo-800 mb-3">🗃️ Database Schema Discovery</h4>
+                    
+                    <!-- Summary Stats -->
+                    <div class="grid grid-cols-3 gap-4 mb-4">
+                        <div class="bg-green-100 p-3 rounded text-center">
+                            <div class="text-2xl font-bold text-green-800">${foundTables.length}</div>
+                            <div class="text-sm text-green-600">Accessible</div>
+                        </div>
+                        <div class="bg-yellow-100 p-3 rounded text-center">
+                            <div class="text-2xl font-bold text-yellow-800">${blockedTables.length}</div>
+                            <div class="text-sm text-yellow-600">Blocked</div>
+                        </div>
+                        <div class="bg-red-100 p-3 rounded text-center">
+                            <div class="text-2xl font-bold text-red-800">${notFoundTables.length}</div>
+                            <div class="text-sm text-red-600">Not Found</div>
+                        </div>
+                    </div>
+
+                    <!-- Detailed Results -->
+                    <div class="space-y-2">
+                        ${schemaInfo.map(info => {
+                            let statusColor, statusText, icon;
+                            
+                            if (info.status === 'FOUND_ACCESSIBLE') {
+                                statusColor = 'bg-green-100 text-green-800';
+                                statusText = 'ACCESSIBLE';
+                                icon = '✅';
+                            } else if (info.status === 'ACCESS_BLOCKED') {
+                                statusColor = 'bg-yellow-100 text-yellow-800';
+                                statusText = 'BLOCKED';
+                                icon = '🚫';
+                            } else if (info.status === 'NOT_FOUND') {
+                                statusColor = 'bg-red-100 text-red-800';
+                                statusText = 'NOT FOUND';
+                                icon = '❌';
+                            } else {
+                                statusColor = 'bg-gray-100 text-gray-800';
+                                statusText = 'ERROR';
+                                icon = '⚠️';
+                            }
+
+                            return `
+                                <div class="p-3 bg-white rounded">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <span class="font-medium">${info.table}</span>
+                                        <span class="px-2 py-1 text-xs rounded ${statusColor}">
+                                            ${icon} ${statusText}
+                                        </span>
+                                    </div>
+                                    ${info.status === 'FOUND_ACCESSIBLE' ? `
+                                        <div class="text-sm text-gray-600">
+                                            <strong>Records:</strong> ${info.recordCount}<br>
+                                            <strong>Columns:</strong> ${info.columns.length > 0 ? info.columns.join(', ') : 'No columns detected'}
+                                        </div>
+                                    ` : info.status === 'ACCESS_BLOCKED' ? `
+                                        <div class="text-sm text-yellow-600">
+                                            🔒 Table exists but RLS blocks access
+                                        </div>
+                                    ` : info.status === 'NOT_FOUND' ? `
+                                        <div class="text-sm text-red-600">
+                                            Table does not exist in database
+                                        </div>
+                                    ` : `
+                                        <div class="text-sm text-gray-600">
+                                            ${info.error || 'Unknown error occurred'}
+                                        </div>
+                                    `}
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                    
+                    <div class="mt-4 text-sm text-indigo-700">
+                        <strong>Schema Summary:</strong> 
+                        ${foundTables.length > 0 ? `Found ${foundTables.length} accessible tables` : 'No accessible tables found'}.
+                        ${blockedTables.length > 0 ? `${blockedTables.length} tables exist but access is blocked by RLS.` : ''}
+                        ${notFoundTables.length > 0 ? `${notFoundTables.length} tables don't exist.` : ''}
+                    </div>
+                </div>
+            `;
+
+            resultDiv.innerHTML = schemaHtml;
+        };
+
+        // Test OAuth signup with Google
+        window.testOAuthSignup = async function() {
+            const resultDiv = document.getElementById('securityResult');
+            resultDiv.innerHTML = '<div class="flex items-center justify-center py-4"><div class="loading-spinner mr-2"></div> Initiating Google OAuth...</div>';
+
+            try {
+                const { data, error } = await supabase.auth.signInWithOAuth({
+                    provider: 'google',
+                    options: {
+                        redirectTo: window.location.href,
+                        queryParams: {
+                            access_type: 'offline',
+                            prompt: 'consent',
+                        }
+                    }
+                });
+
+                if (error) throw error;
+
+                resultDiv.innerHTML = `
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <h4 class="font-semibold text-red-800 mb-3">🔐 Google OAuth Initiated</h4>
+                        <div class="text-sm text-red-700">
+                            <strong>Status:</strong> Redirecting to Google...<br>
+                            <strong>URL:</strong> ${data.url}<br>
+                            <strong>Note:</strong> Complete the Google sign-in in the popup window. You'll be redirected back here automatically.
+                        </div>
+                    </div>
+                `;
+
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="text-error">
+                        <strong>OAuth Initiation Failed:</strong><br>
+                        ${error.message}
+                    </div>
+                `;
+            }
+        };
+
+        // Test data access when authenticated
+        window.testDataAccess = async function() {
+            const resultDiv = document.getElementById('securityResult');
+            
+            if (!currentUser) {
+                resultDiv.innerHTML = `
+                    <div class="text-error">
+                        <strong>Authentication Required:</strong><br>
+                        Please sign in with Google OAuth first to test data access permissions.
+                    </div>
+                `;
+                return;
+            }
+
+            resultDiv.innerHTML = '<div class="flex items-center justify-center py-4"><div class="loading-spinner mr-2"></div> Testing data access permissions...</div>';
+
+            const testResults = [];
+
+            // Test 1: Try to access other users' data
+            try {
+                const { data: allUsers, error: usersError } = await supabase
+                    .from('users')
+                    .select('*');
+
+                testResults.push({
+                    test: 'Access All Users',
+                    status: usersError ? 'DENIED' : 'ALLOWED',
+                    details: usersError ? usersError.message : `Found ${allUsers?.length || 0} users`,
+                    risk: usersError ? 'LOW' : 'HIGH'
+                });
+            } catch (error) {
+                testResults.push({
+                    test: 'Access All Users',
+                    status: 'ERROR',
+                    details: error.message,
+                    risk: 'UNKNOWN'
+                });
+            }
+
+            // Test 2: Try to access other users' notes
+            try {
+                const { data: allNotes, error: notesError } = await supabase
+                    .from('notes')
+                    .select('*');
+
+                testResults.push({
+                    test: 'Access All Notes',
+                    status: notesError ? 'DENIED' : 'ALLOWED',
+                    details: notesError ? notesError.message : `Found ${allNotes?.length || 0} notes`,
+                    risk: notesError ? 'LOW' : 'HIGH'
+                });
+            } catch (error) {
+                testResults.push({
+                    test: 'Access All Notes',
+                    status: 'ERROR',
+                    details: error.message,
+                    risk: 'UNKNOWN'
+                });
+            }
+
+            // Test 3: Try to access specific other user's data (if we can find other users)
+            try {
+                const { data: otherUsers, error: otherUsersError } = await supabase
+                    .from('users')
+                    .select('id')
+                    .neq('id', currentUser.id)
+                    .limit(1);
+
+                if (!otherUsersError && otherUsers && otherUsers.length > 0) {
+                    const otherUserId = otherUsers[0].id;
+                    
+                    // Try to access their notes
+                    const { data: userNotes, error: userNotesError } = await supabase
+                        .from('notes')
+                        .select('*')
+                        .eq('user_id', otherUserId);
+
+                    testResults.push({
+                        test: `Access User ${otherUserId.slice(0, 8)}... Data`,
+                        status: userNotesError ? 'DENIED' : 'ALLOWED',
+                        details: userNotesError ? userNotesError.message : `Found ${userNotes?.length || 0} notes`,
+                        risk: userNotesError ? 'LOW' : 'CRITICAL'
+                    });
+                } else {
+                    testResults.push({
+                        test: 'Access Other User Data',
+                        status: 'NO_DATA',
+                        details: 'No other users found to test against',
+                        risk: 'LOW'
+                    });
+                }
+            } catch (error) {
+                testResults.push({
+                    test: 'Access Other User Data',
+                    status: 'ERROR',
+                    details: error.message,
+                    risk: 'UNKNOWN'
+                });
+            }
+
+            // Test 4: Try to modify other users' data
+            try {
+                const { data: testUsers, error: testUsersError } = await supabase
+                    .from('users')
+                    .select('id')
+                    .neq('id', currentUser.id)
+                    .limit(1);
+
+                if (!testUsersError && testUsers && testUsers.length > 0) {
+                    const otherUserId = testUsers[0].id;
+                    
+                    // Try to update another user's data
+                    const { error: updateError } = await supabase
+                        .from('users')
+                        .update({ test_field: 'unauthorized_update' })
+                        .eq('id', otherUserId);
+
+                    testResults.push({
+                        test: `Modify User ${otherUserId.slice(0, 8)}... Data`,
+                        status: updateError ? 'DENIED' : 'ALLOWED',
+                        details: updateError ? updateError.message : 'Update succeeded - SECURITY RISK!',
+                        risk: updateError ? 'LOW' : 'CRITICAL'
+                    });
+                } else {
+                    testResults.push({
+                        test: 'Modify Other User Data',
+                        status: 'NO_DATA',
+                        details: 'No other users found to test against',
+                        risk: 'LOW'
+                    });
+                }
+            } catch (error) {
+                testResults.push({
+                    test: 'Modify Other User Data',
+                    status: 'ERROR',
+                    details: error.message,
+                    risk: 'UNKNOWN'
+                });
+            }
+
+            // Generate security assessment
+            const highRiskTests = testResults.filter(r => r.risk === 'HIGH' || r.risk === 'CRITICAL');
+            const allowedTests = testResults.filter(r => r.status === 'ALLOWED');
+
+            const accessHtml = `
+                <div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                    <h4 class="font-semibold text-orange-800 mb-3">🔓 Data Access Security Analysis</h4>
+                    <div class="space-y-2 mb-4">
+                        ${testResults.map(result => `
+                            <div class="p-3 bg-white rounded">
+                                <div class="flex items-center justify-between mb-1">
+                                    <span class="font-medium">${result.test}</span>
+                                    <span class="px-2 py-1 text-xs rounded ${
+                                        result.status === 'ALLOWED' ? 'bg-green-100 text-green-800' :
+                                        result.status === 'DENIED' ? 'bg-red-100 text-red-800' :
+                                        result.status === 'ERROR' ? 'bg-yellow-100 text-yellow-800' :
+                                        'bg-gray-100 text-gray-800'
+                                    }">
+                                        ${result.status}
+                                    </span>
+                                </div>
+                                <div class="text-sm text-gray-600">${result.details}</div>
+                                <div class="text-xs mt-1">
+                                    Risk Level: <span class="font-medium ${
+                                        result.risk === 'CRITICAL' ? 'text-red-600' :
+                                        result.risk === 'HIGH' ? 'text-orange-600' :
+                                        result.risk === 'LOW' ? 'text-green-600' :
+                                        'text-gray-600'
+                                    }">${result.risk}</span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="border-t pt-3">
+                        <div class="text-sm font-semibold mb-2">Security Assessment:</div>
+                        <div class="text-sm ${
+                            highRiskTests.length > 0 ? 'text-red-700' : 'text-green-700'
+                        }">
+                            ${highRiskTests.length > 0 ? 
+                                `🚨 <strong>SECURITY RISK DETECTED!</strong> Found ${highRiskTests.length} high-risk vulnerabilities. Authenticated users can access other users' data.` :
+                                '✅ <strong>SECURITY LOOKS GOOD</strong> RLS policies appear to properly restrict data access between users.'
+                            }
+                        </div>
+                        ${allowedTests.length > 0 ? `
+                            <div class="text-sm text-orange-600 mt-2">
+                                <strong>Note:</strong> ${allowedTests.length} tests returned data. This may be expected (your own data) or indicate overly permissive policies.
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+
+            resultDiv.innerHTML = accessHtml;
+        };
+
+        // Sign out function
+        window.signOut = async function() {
+            await supabase.auth.signOut();
+        };
+
+        // Initialize auth status on load
+        updateAuthStatus();
+
+        // Auto-test connection on page load
+        window.addEventListener('load', async () => {
+            // Small delay to ensure DOM is ready
+            setTimeout(() => {
+                testConnection();
+            }, 500);
+        });
+
+        // Try to extract table names from deployed site
+        window.extractTableNames = async function() {
+            const resultDiv = document.getElementById('securityResult');
+            resultDiv.innerHTML = '<div class="flex items-center justify-center py-4"><div class="loading-spinner mr-2"></div> Extracting table names from deployed site...</div>';
+
+            try {
+                // Fetch the main JavaScript bundle from the deployed site
+                const response = await fetch('https://studdyhub.vercel.app/assets/index.DLhWMd3O.js');
+                const jsContent = await response.text();
+
+                // Look for Supabase table references in the code
+                const tablePatterns = [
+                    /\.from\(['"`]([^'"`]+)['"`]\)/g,
+                    /table:\s*['"`]([^'"`]+)['"`]/g,
+                    /tableName:\s*['"`]([^'"`]+)['"`]/g,
+                    /\.select\([^)]*\)\.from\(['"`]([^'"`]+)['"`]\)/g
+                ];
+
+                const foundTables = new Set();
+                
+                tablePatterns.forEach(pattern => {
+                    const matches = jsContent.match(pattern);
+                    if (matches) {
+                        matches.forEach(match => {
+                            const tableMatch = match.match(/['"`]([^'"`]+)['"`]/);
+                            if (tableMatch && tableMatch[1]) {
+                                const tableName = tableMatch[1];
+                                // Filter out obvious non-table names
+                                if (!tableName.includes('_') && 
+                                    !tableName.includes('.') && 
+                                    !tableName.includes('$') &&
+                                    tableName.length > 1 &&
+                                    tableName !== 'count' &&
+                                    tableName !== 'data') {
+                                    foundTables.add(tableName);
+                                }
+                            }
+                        });
+                    }
+                });
+
+                // Also look for common Supabase patterns
+                const supabasePatterns = [
+                    /supabase\.from\(['"`]([^'"`]+)['"`]\)/g,
+                    /createClient[^)]+from\(['"`]([^'"`]+)['"`]/g
+                ];
+
+                supabasePatterns.forEach(pattern => {
+                    const matches = jsContent.match(pattern);
+                    if (matches) {
+                        matches.forEach(match => {
+                            const tableMatch = match.match(/from\(['"`]([^'"`]+)['"`]/);
+                            if (tableMatch && tableMatch[1]) {
+                                foundTables.add(tableMatch[1]);
+                            }
+                        });
+                    }
+                });
+
+                const tableArray = Array.from(foundTables).sort();
+
+                const extractHtml = `
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <h4 class="font-semibold text-blue-800 mb-3">🔍 Table Names Extracted from Deployed Site</h4>
+                        
+                        <div class="mb-4">
+                            <div class="text-sm font-medium text-gray-700 mb-2">Found ${tableArray.length} potential table names:</div>
+                            <div class="flex flex-wrap gap-2">
+                                ${tableArray.map(table => `
+                                    <button onclick="testTable('${table}')" class="px-3 py-1 bg-blue-100 text-blue-800 rounded-md text-sm hover:bg-blue-200 transition-colors">
+                                        ${table}
+                                    </button>
+                                `).join('')}
+                            </div>
+                        </div>
+
+                        <div class="text-sm text-blue-700">
+                            <strong>Method:</strong> Parsed the production JavaScript bundle for Supabase table references.<br>
+                            <strong>Note:</strong> These are the tables actually used by the live application.
+                        </div>
+
+                        ${tableArray.length > 0 ? `
+                            <div class="mt-3">
+                                <button onclick="testAllExtractedTables()" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors">
+                                    🧪 Test All Found Tables
+                                </button>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+
+                resultDiv.innerHTML = extractHtml;
+
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <h4 class="font-semibold text-red-800 mb-3">❌ Extraction Failed</h4>
+                        <div class="text-sm text-red-700">
+                            <strong>Error:</strong> ${error.message}<br>
+                            <strong>Note:</strong> The deployed site might have different file names or access restrictions.
+                        </div>
+                    </div>
+                `;
+            }
+        };
+
+        // Test all extracted tables
+        window.testAllExtractedTables = async function() {
+            const resultDiv = document.getElementById('securityResult');
+            resultDiv.innerHTML = '<div class="flex items-center justify-center py-4"><div class="loading-spinner mr-2"></div> Testing all extracted tables...</div>';
+
+            // First extract the tables again
+            try {
+                const response = await fetch('https://studdyhub.vercel.app/assets/index.DLhWMd3O.js');
+                const jsContent = await response.text();
+
+                const tablePatterns = [/\.from\(['"`]([^'"`]+)['"`]\)/g];
+                const foundTables = new Set();
+                
+                tablePatterns.forEach(pattern => {
+                    const matches = jsContent.match(pattern);
+                    if (matches) {
+                        matches.forEach(match => {
+                            const tableMatch = match.match(/['"`]([^'"`]+)['"`]/);
+                            if (tableMatch && tableMatch[1]) {
+                                const tableName = tableMatch[1];
+                                if (!tableName.includes('_') && !tableName.includes('.') && tableName.length > 1) {
+                                    foundTables.add(tableName);
+                                }
+                            }
+                        });
+                    }
+                });
+
+                const tableArray = Array.from(foundTables);
+                const results = [];
+
+                for (const table of tableArray) {
+                    try {
+                        const { data, error, count } = await supabase
+                            .from(table)
+                            .select('*', { count: 'exact', head: false })
+                            .limit(1);
+
+                        if (!error) {
+                            results.push({
+                                table,
+                                status: 'ACCESSIBLE',
+                                records: count || 0,
+                                hasData: data && data.length > 0
+                            });
+                        } else {
+                            let status = 'BLOCKED';
+                            if (error.message.includes('relation') && error.message.includes('does not exist')) {
+                                status = 'NOT_FOUND';
+                            }
+                            results.push({
+                                table,
+                                status,
+                                error: error.message
+                            });
+                        }
+                    } catch (error) {
+                        results.push({
+                            table,
+                            status: 'ERROR',
+                            error: error.message
+                        });
+                    }
+                }
+
+                const testResultsHtml = `
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <h4 class="font-semibold text-green-800 mb-3">📊 Live Table Test Results</h4>
+                        
+                        <div class="space-y-2">
+                            ${results.map(result => {
+                                let statusColor, statusIcon;
+                                if (result.status === 'ACCESSIBLE') {
+                                    statusColor = 'bg-green-100 text-green-800';
+                                    statusIcon = '✅';
+                                } else if (result.status === 'BLOCKED') {
+                                    statusColor = 'bg-yellow-100 text-yellow-800';
+                                    statusIcon = '🚫';
+                                } else if (result.status === 'NOT_FOUND') {
+                                    statusColor = 'bg-red-100 text-red-800';
+                                    statusIcon = '❌';
+                                } else {
+                                    statusColor = 'bg-gray-100 text-gray-800';
+                                    statusIcon = '⚠️';
+                                }
+
+                                return `
+                                    <div class="p-3 bg-white rounded">
+                                        <div class="flex items-center justify-between">
+                                            <span class="font-medium">${result.table}</span>
+                                            <span class="px-2 py-1 text-xs rounded ${statusColor}">
+                                                ${statusIcon} ${result.status}
+                                            </span>
+                                        </div>
+                                        ${result.status === 'ACCESSIBLE' ? `
+                                            <div class="text-sm text-gray-600">
+                                                Records: ${result.records} | ${result.hasData ? 'Has data' : 'Empty'}
+                                            </div>
+                                        ` : result.status === 'BLOCKED' ? `
+                                            <div class="text-sm text-yellow-600">
+                                                🔒 RLS protected
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+
+                        <div class="mt-4 text-sm text-green-700">
+                            <strong>Summary:</strong> Tested ${results.length} actual tables used by the live StuddyHub application.
+                        </div>
+                    </div>
+                `;
+
+                resultDiv.innerHTML = testResultsHtml;
+
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="text-error">
+                        <strong>Batch Test Failed:</strong><br>
+                        ${error.message}
+                    </div>
+                `;
+            }
+        };
+        function addDownloadButton(tableName, data) {
+            const container = document.getElementById('downloadBtnContainer');
+            container.innerHTML = `
+                <div class="flex gap-2">
+                    <button onclick="downloadData('${tableName}', 'json')" 
+                            class="px-3 py-1 bg-success text-white text-sm rounded-md hover:bg-green-600 transition-colors">
+                        <i class="fas fa-download mr-1"></i>Download JSON
+                    </button>
+                    <button onclick="downloadData('${tableName}', 'csv')" 
+                            class="px-3 py-1 bg-blue-500 text-white text-sm rounded-md hover:bg-blue-600 transition-colors">
+                        <i class="fas fa-file-csv mr-1"></i>Download CSV
+                    </button>
+                    <button onclick="downloadData('${tableName}', 'txt')" 
+                            class="px-3 py-1 bg-gray-500 text-white text-sm rounded-md hover:bg-gray-600 transition-colors">
+                        <i class="fas fa-file-alt mr-1"></i>Download TXT
+                    </button>
+                    <button onclick="downloadAllData()" 
+                            class="px-3 py-1 bg-purple-500 text-white text-sm rounded-md hover:bg-purple-600 transition-colors">
+                        <i class="fas fa-archive mr-1"></i>Download All Tables
+                    </button>
+                </div>
+            `;
+        }
+
+        function removeDownloadButton() {
+            const container = document.getElementById('downloadBtnContainer');
+            container.innerHTML = '';
+        }
+
+        window.downloadData = function(tableName, format) {
+            if (!currentData) {
+                alert('No data to download');
+                return;
+            }
+
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            let content, mimeType, filename;
+
+            switch (format) {
+                case 'json':
+                    filename = `${tableName}_data_${timestamp}.json`;
+                    content = JSON.stringify({
+                        table: tableName,
+                        timestamp: new Date().toISOString(),
+                        recordCount: currentData.length,
+                        data: currentData
+                    }, null, 2);
+                    mimeType = 'application/json';
+                    break;
+                
+                case 'csv':
+                    filename = `${tableName}_data_${timestamp}.csv`;
+                    if (currentData.length > 0) {
+                        const headers = Object.keys(currentData[0]);
+                        const csvContent = [
+                            headers.join(','),
+                            ...currentData.map(row => 
+                                headers.map(header => {
+                                    const value = row[header];
+                                    // Handle values that contain commas or quotes
+                                    if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
+                                        return `"${value.replace(/"/g, '""')}"`;
+                                    }
+                                    return value;
+                                }).join(',')
+                            )
+                        ].join('\n');
+                        content = csvContent;
+                    } else {
+                        content = 'No data available';
+                    }
+                    mimeType = 'text/csv';
+                    break;
+                
+                case 'txt':
+                    filename = `${tableName}_data_${timestamp}.txt`;
+                    content = `Table: ${tableName}\n`;
+                    content += `Timestamp: ${new Date().toISOString()}\n`;
+                    content += `Record Count: ${currentData.length}\n\n`;
+                    content += 'Data:\n';
+                    content += JSON.stringify(currentData, null, 2);
+                    mimeType = 'text/plain';
+                    break;
+                
+                default:
+                    alert('Unsupported format');
+                    return;
+            }
+
+            const blob = new Blob([content], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        };
+
+        // Download all tables data
+        window.downloadAllData = async function() {
+            const allTables = [
+                'notes', 'documents', 'profiles', 'social_users', 'class_recordings',
+                'chat_sessions', 'social_posts', 'social_groups', 'ai_podcasts', 
+                'subscriptions', 'schedule_items', 'document_folders', 'quizzes'
+            ];
+            
+            const allData = {
+                timestamp: new Date().toISOString(),
+                tables: {}
+            };
+
+            for (const table of allTables) {
+                try {
+                    const { data, error, count } = await supabase
+                        .from(table)
+                        .select('*', { count: 'exact', head: false })
+                        .limit(100); // Limit to prevent huge downloads
+
+                    if (!error && data) {
+                        allData.tables[table] = {
+                            recordCount: count || data.length,
+                            data: data,
+                            accessible: true
+                        };
+                    } else {
+                        allData.tables[table] = {
+                            recordCount: 0,
+                            data: [],
+                            accessible: false,
+                            error: error?.message || 'Access denied'
+                        };
+                    }
+                } catch (error) {
+                    allData.tables[table] = {
+                        recordCount: 0,
+                        data: [],
+                        accessible: false,
+                        error: error.message
+                    };
+                }
+            }
+
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const filename = `studdyhub_complete_audit_${timestamp}.json`;
+            const content = JSON.stringify(allData, null, 2);
+            
+            const blob = new Blob([content], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        };
+    </script>
+</body>
+</html>
